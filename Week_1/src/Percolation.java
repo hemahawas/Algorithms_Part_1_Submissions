@@ -7,24 +7,20 @@
 import edu.princeton.cs.algs4.WeightedQuickUnionUF;
 
 public class Percolation {
-    /*
-    TODO:
-    1. Restructure project files
-    2. upload in github
-     */
-    // TODO: Revise your entire code because I have seen a lot of bugs that i didn't fix and left them fore you
-    private int n;
-    private int[][] grid;
+
+    private final int n;
+    private final int[] id;
     private int openedSites = 0;
-    WeightedQuickUnionUF uf;
-    private final int virtualTop; // TODO: check from the HW what they should be
+    private final WeightedQuickUnionUF uf;
+    private static final int virtualTop = 0;
     private final int virtualBottom;
 
     // creates n-by-n grid, with all sites initially blocked
     public Percolation(int n) {
-        uf = new WeightedQuickUnionUF(n);
+        this.uf = new WeightedQuickUnionUF((n*n)+ 2);
         this.n = n;
-        grid = new int[n + 1][n + 1];
+        this.id = new int[(n*n)+ 1];
+        this.virtualBottom = n*n + 1;
 
         if (n <= 0) {
             throw new IllegalArgumentException("n must be positive value");
@@ -32,7 +28,7 @@ public class Percolation {
 
         for (int i = 1; i <= n; i++) {
             for (int j = 1; j <= n; j++) {
-                grid[i][j] = -1;
+                this.id[indexOf(i, j)]= -1;
             }
         }
     }
@@ -43,10 +39,18 @@ public class Percolation {
             throw new IllegalArgumentException("n must be positive value");
         }
 
-        if (grid[row][col] == -1) {
-            grid[row][col] = 0;
-            openedSites++;
+        if (this.id[indexOf(row, col)] == -1) {
+            this.id[indexOf(row, col)] = 0;
+            this.openedSites++;
         }
+        if (row == 1){
+            this.uf.union(virtualTop, indexOf(row, col));
+        }
+        if (row == this.n) {
+            this.uf.union(this.virtualBottom, indexOf(row, col));
+        }
+
+        union(row, col);
     }
 
     // is the site (row, col) open?
@@ -54,9 +58,7 @@ public class Percolation {
         if (row <= 0 || col <= 0) {
             throw new IllegalArgumentException("index must be positive value");
         }
-        if (grid[row][col] != -1)
-            return true;
-        return false;
+        return id[indexOf(row, col)] != -1;
     }
 
     // is the site (row, col) full?
@@ -64,96 +66,86 @@ public class Percolation {
         if (row <= 0 || col <= 0) {
             throw new IllegalArgumentException("index must be positive value");
         }
-        if (grid[row][col] == 1)
-            return true;
+        if (isOpen(row, col)){
+            return this.uf.find(indexOf(row, col)) == this.uf.find(virtualTop);
+        }
         return false;
     }
 
     // returns the number of open sites
     public int numberOfOpenSites() {
-        return openedSites;
+        return this.openedSites;
     }
 
     // does the system percolate?
     public boolean percolates() {
-        for (int j = 1; j <= n; j++) {
-            if (isFull(n, j)) {
-                return true;
-            }
-        }
-        return false;
+        return this.uf.find(virtualTop) == this.uf.find(this.virtualBottom);
     }
 
-    void union(int row, int col) {
-        int up = row - 1 == 0 ? 1 : row - 1;
-        int down = row + 1 == n + 1 ? n : row + 1;
-        int left = col - 1 == 0 ? 1 : col - 1;
-        int right = col + 1 == n + 1 ? n : col + 1;
-
-        if (isFull(up, col) || isFull(down, col) || isFull(row, left) || isFull(row, right)) {
-            grid[row][col] = 1;
-            if (isOpen(up, col) && !isFull(up, col)) {
-                union(up, col);
+    private void union(int row, int col) {
+        if (indexOf(row, col) - n > 0){
+            if(isOpen(row-1, col)){
+                this.uf.union(indexOf(row, col), indexOf(row-1, col));
             }
-            if (isOpen(down, col) && !isFull(down, col)) {
-                union(down, col);
+        }
+        if(indexOf(row, col) + n <= n*n){
+            if(isOpen(row+1, col)){
+                this.uf.union(indexOf(row, col), indexOf(row+1, col));
             }
-            if (isOpen(row, left) && !isFull(row, left)) {
-                union(row, left);
+        }
+        if((indexOf(row, col)-1) % n != 0){
+            if(isOpen(row, col-1)){
+                this.uf.union(indexOf(row, col), indexOf(row, col-1));
             }
-            if (isOpen(row, right) && !isFull(row, right)) {
-                union(row, right);
+        }
+        if(indexOf(row, col) % n != 0){
+            if(isOpen(row, col+1)){
+                this.uf.union(indexOf(row, col), indexOf(row, col+1));
             }
-
         }
     }
 
 
     // Translate from Coordinate indices to array indices
-    // TODO: Implement function indexOf
+    private int indexOf(int row, int col) {
+        return ((row-1) * this.n) + col;
+    }
 
     // test client (optional)
     public static void main(String[] args) {
         // Unit Test for each function
         // Instance
-        int n = 2;
+        int n = 1;
         Percolation percolation = new Percolation(n);
-        // TODO: Verify your code running using each provided test below
-        // Test open
-        System.out.println("#########open() Testing#########");
+         //Test open
+       // System.out.println("#########open() Testing#########");
 
-        System.out.println("False; Before opening index(0,0): " + percolation.isOpen(0, 0));
-        assert (!percolation.isOpen(0, 0)) : "isOpen should've returned false but it returnde true";
-        percolation.open(0, 0);
-        System.out.println("True; After opening index(0,0): " + percolation.isOpen(0, 0));
-
-        System.out.println();
-
-        /* TODO: to open functions as soon as The above code runs successfully
-        // Test union (within open)
+//        System.out.println("False; Before opening index(1,1): " + percolation.isOpen(1,1));
+//        //assert (!percolation.isOpen(1,1)) : "isOpen should've returned false, but it returned true";
+//        percolation.open(1,1);
+//        System.out.println("True; After opening index(1,1): " + percolation.isOpen(1,1));
+//
+//        System.out.println();
         System.out.println("#########union() Testing#########");
 
-        percolation.open(0, 1);
-        System.out.println("True; index(0,1) after opening isFull: " + percolation.isFull(0, 1));
+        percolation.open(1, 1);
+        System.out.println("True; index(1,1) after opening isFull: " + percolation.isFull(1, 1));
 
-        System.out.println("False; index(1,0) before opening isFull: " + percolation.isFull(1, 1));
-        percolation.open(1, 0);
-        System.out.println("True; index (1,0) after opening isFull: " + percolation.isFull(1, 0));
-
+//        System.out.println("False; index(3,2) before opening isFull: " + percolation.isFull(3,2));
+//        percolation.open(3, 2);
+//        System.out.println("True; index (3,2) after opening isFull: " + percolation.isFull(3,2));
+//
+//        System.out.println();
+//        System.out.println("True; index (2,2) connected to bottom? "
+//                                   + (percolation.uf.find(percolation.indexOf(2,2)) ==
+//                percolation.uf.find(percolation.virtualBottom)));
+//
+//
         System.out.println();
-        System.out.println("True; index (1,0) connected to bottom? "
-                                   + (percolation.uf.find(percolation.indexOf(1, 0)) ==
-                percolation.uf.find(percolation.virtualBottom)));
-        System.out.println("True; index (1,0) connected to bottom? "
-                                   + percolation.uf.connected(percolation.indexOf(1, 0),
-                                                              percolation.virtualBottom));
-        System.out.println();
-
-        // Test percolates()
+         //Test percolates()
         System.out.println("#########percolates() Testing#########");
         System.out.println("True; percolation.percolates(): " + percolation.percolates());
-        percolation.open(1, 1);
-        */
+
         // Entire Percolation Test
         /*//Instance
         int n = 4;
@@ -167,22 +159,7 @@ public class Percolation {
                                    percolation.uf.connected(percolation.virtualBottom,
                                                             percolation.indexOf(3, 0)));
 
+            */
 
-
-        /* Hema's Code
-        int n = 10;
-        Percolation percolation = new Percolation(n);
-        while (!percolation.percolates()) {
-            int row = StdRandom.uniform(1, n + 1);
-            int col = StdRandom.uniform(1, n + 1);
-
-            percolation.open(row, col);
-
-            if (row == 1)
-                percolation.grid[row][col] = 1;
-
-            percolation.union(row, col);
-        }
-    */
     }
 }
